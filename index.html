@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Laporan Kesalahan Kain</title>
+    <style>
+        body { font-family: sans-serif; background: #f1f5f9; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #e11d48; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        #adminView { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+        th, td { border: 1px solid #ddd; padding: 6px; }
+        img { width: 40px; cursor: pointer; border-radius: 4px; }
+        .summary { background: #fee2e2; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="formView">
+    <h2>Laporan Kesalahan Kain</h2>
+    <form id="laporanForm">
+        <div class="form-group"><label>Nama Pelapor</label><input type="text" id="namaPelapor" required></div>
+        <div class="form-group"><label>Nama Orang yang Salah</label><input type="text" id="nama" required></div>
+        <div class="form-group"><label>Kesalahan Baju</label><input type="text" id="baju"></div>
+        <div class="form-group"><label>Kesalahan Lengan</label><input type="text" id="lengan"></div>
+        <div class="form-group"><label>Kesalahan Celana</label><input type="text" id="celana"></div>
+        <div class="form-group"><label>Keterangan Lain</label><textarea id="lain"></textarea></div>
+        <div class="form-group"><label>Foto Bukti</label><input type="file" id="foto" accept="image/*"></div>
+        <button type="submit" id="btnSubmit">Kirim Laporan</button>
+    </form>
+    <p style="text-align:center; margin-top:15px; cursor:pointer; color:blue;" onclick="bukaAdmin()">Panel Admin</p>
+</div>
+
+<div class="card" id="adminView">
+    <h2>Daftar Kesalahan</h2>
+    <div id="ringkasan" class="summary"></div>
+    <table>
+        <thead><tr><th>Salah</th><th>Baju</th><th>Lengan</th><th>Celana</th><th>Foto</th></tr></thead>
+        <tbody id="tb"></tbody>
+    </table>
+    <button onclick="location.reload()" style="background:#64748b; margin-top:10px;">Kembali</button>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxrwALZGRm9GFX0mGAmvWl-YzkgbcvQC3ABtlGOKp1jq7T-R1teidHTx8eB2gTguL167g/exec"; 
+
+    document.getElementById('laporanForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const file = document.getElementById('foto').files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onloadend = () => kirim(reader.result);
+            reader.readAsDataURL(file);
+        } else { kirim(""); }
+    });
+
+    function kirim(img) {
+        const data = new URLSearchParams({
+            namaPelapor: document.getElementById('namaPelapor').value,
+            nama: document.getElementById('nama').value,
+            baju: document.getElementById('baju').value,
+            lengan: document.getElementById('lengan').value,
+            celana: document.getElementById('celana').value,
+            lain: document.getElementById('lain').value,
+            foto: img
+        });
+        fetch(SCRIPT_URL, {method: 'POST', body: data})
+        .then(() => { alert("Terkirim!"); location.reload(); });
+    }
+
+    function bukaAdmin() {
+        const pass = prompt("Password Admin:");
+        if(pass === "admin123") {
+            document.getElementById('formView').style.display = 'none';
+            document.getElementById('adminView').style.display = 'block';
+            fetch(SCRIPT_URL)
+            .then(r => r.json())
+            .then(d => {
+                const sekarang = new Date();
+                const dBulanIni = d.filter(i => new Date(i.waktu).getMonth() === sekarang.getMonth());
+                
+                let b=0, l=0, c=0;
+                dBulanIni.forEach(i => { if(i.baju) b++; if(i.lengan) l++; if(i.celana) c++; });
+                
+                document.getElementById('ringkasan').innerHTML = `Bulan ini: Baju=${b}, Lengan=${l}, Celana=${c} (Total: ${dBulanIni.length})`;
+                document.getElementById('tb').innerHTML = dBulanIni.map(i => `<tr>
+                    <td>${i.nama}</td><td>${i.baju ? '✓':''}</td><td>${i.lengan ? '✓':''}</td><td>${i.celana ? '✓':''}</td>
+                    <td><img src="${i.foto}" onclick="window.open('${i.foto}')"></td>
+                </tr>`).join('');
+            });
+        } else { alert("Password Salah!"); }
+    }
+</script>
+</body>
+</html>
